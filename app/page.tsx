@@ -1,69 +1,123 @@
-import Image from "next/image";
+import React from "react";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="w-full">
+      {/* ====================================================================
+          1. SECCIÓN HERO
+          Presentación principal con la identidad visual y mensaje de Re-Manga.
+          ==================================================================== */}
+      <section
+        id="hero"
+        className="min-h-[450px] sm:min-h-[500px] md:min-h-[600px] max-w-[var(--max-ancho)] mx-auto px-5 sm:px-6 md:px-[30px] py-[50px] sm:py-[70px] md:py-[100px] flex flex-col justify-center items-start"
+      >
+        <h1 className="max-w-[700px] text-[2.3rem] sm:text-[2.8rem] md:text-[3.5rem] font-bold leading-[1.1] mb-[25px] text-[var(--color-texto)]">
+          Tu próximo manga puede tener una segunda historia
+        </h1>
+        <p className="max-w-[600px] text-[var(--color-texto-secundario)] text-base md:text-[1.2rem] leading-relaxed">
+          Encuentra mangas de segunda mano en buen estado y dales una nueva vida.
+        </p>
+      </section>
+
+      {/* ====================================================================
+          2. SECCIÓN CATÁLOGO (ANCLAJE TEMPORAL)
+          Conserva el identificador #catalogo y el encabezado original para evitar
+          enlaces rotos en la navegación hasta su migración funcional completa.
+          ==================================================================== */}
+      <section
+        id="catalogo"
+        className="max-w-[var(--max-ancho)] mx-auto px-5 sm:px-6 md:px-[30px] py-[50px] md:py-[var(--espacio-grande)]"
+      >
+        <h2 className="text-[1.8rem] md:text-[2.2rem] font-bold mb-[15px] text-[var(--color-texto)]">
+          Catálogo
+        </h2>
+        <p className="text-[var(--color-texto-secundario)] mb-8">
+          Explora nuestra colección de mangas de segunda mano.
+        </p>
+
+        <div className="p-8 border border-dashed border-[var(--color-borde)] rounded-[var(--radio)] bg-[var(--color-blanco)] text-center transition-colors duration-200">
+          <p className="text-base text-[var(--color-texto-secundario)]">
+            El catálogo interactivo con filtros de género, buscador y tarjetas dinámicas se integrará en la siguiente etapa de migración.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* ====================================================================
+          3. SECCIÓN CÓMO FUNCIONA
+          Explica el proceso de compra y reutilización en 3 bloques estructurados.
+          ==================================================================== */}
+      <section
+        id="como-funciona"
+        className="max-w-[var(--max-ancho)] mx-auto px-5 sm:px-6 md:px-[30px] py-[50px] md:py-[var(--espacio-grande)] bg-[var(--color-blanco)] rounded-[var(--radio)] my-6 transition-colors duration-200"
+      >
+        <h2 className="text-[1.8rem] md:text-[2.2rem] font-bold mb-[15px] text-[var(--color-texto)]">
+          Cómo funciona
+        </h2>
+        <p className="text-[var(--color-texto-secundario)]">
+          Encuentra, elige y dale una nueva vida a tus mangas.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-[30px]">
+          <article className="border border-[var(--color-borde)] rounded-[var(--radio)] p-6 bg-[var(--color-blanco)] transition-colors duration-200">
+            <span className="block mb-3 text-[var(--color-principal)] font-extrabold text-base">
+              01
+            </span>
+            <h3 className="mb-2 text-[1.2rem] font-bold text-[var(--color-texto)]">
+              Explora
+            </h3>
+            <p className="text-[0.95rem] text-[var(--color-texto-secundario)] leading-relaxed">
+              Encuentra el manga que estás buscando en nuestro catálogo.
+            </p>
+          </article>
+
+          <article className="border border-[var(--color-borde)] rounded-[var(--radio)] p-6 bg-[var(--color-blanco)] transition-colors duration-200">
+            <span className="block mb-3 text-[var(--color-principal)] font-extrabold text-base">
+              02
+            </span>
+            <h3 className="mb-2 text-[1.2rem] font-bold text-[var(--color-texto)]">
+              Elige
+            </h3>
+            <p className="text-[0.95rem] text-[var(--color-texto-secundario)] leading-relaxed">
+              Revisa su estado, volumen y precio antes de agregarlo al carrito.
+            </p>
+          </article>
+
+          <article className="border border-[var(--color-borde)] rounded-[var(--radio)] p-6 bg-[var(--color-blanco)] transition-colors duration-200">
+            <span className="block mb-3 text-[var(--color-principal)] font-extrabold text-base">
+              03
+            </span>
+            <h3 className="mb-2 text-[1.2rem] font-bold text-[var(--color-texto)]">
+              Dale una nueva vida
+            </h3>
+            <p className="text-[0.95rem] text-[var(--color-texto-secundario)] leading-relaxed">
+              Compra mangas de segunda mano y permite que otra persona vuelva a disfrutarlos.
+            </p>
+          </article>
         </div>
-      </main>
+      </section>
+
+      {/* ====================================================================
+          4. SECCIÓN VENDER MANGA (ANCLAJE TEMPORAL)
+          Conserva el identificador #vender y el encabezado original para evitar
+          enlaces rotos en la navegación hasta su migración funcional completa.
+          ==================================================================== */}
+      <section
+        id="vender"
+        className="max-w-[var(--max-ancho)] mx-auto px-5 sm:px-6 md:px-[30px] py-[50px] md:py-[var(--espacio-grande)] text-center"
+      >
+        <h2 className="text-[1.8rem] md:text-[2.2rem] font-bold mb-[15px] text-[var(--color-texto)]">
+          Vender manga
+        </h2>
+        <p className="max-w-[600px] mx-auto text-[var(--color-texto-secundario)] mb-8">
+          ¿Tienes mangas que ya no lees? Puedes venderlos con nosotros.
+        </p>
+
+        <div className="max-w-[600px] mx-auto p-8 border border-dashed border-[var(--color-borde)] rounded-[var(--radio)] bg-[var(--color-blanco)] text-center transition-colors duration-200">
+          <p className="text-base text-[var(--color-texto-secundario)]">
+            El formulario de venta y solicitud para publicar mangas se integrará en las etapas posteriores de la migración.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
