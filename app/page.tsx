@@ -1,4 +1,5 @@
 import { CatalogSection } from "@/components/CatalogSection";
+import { SaleSection } from "@/components/SaleSection";
 
 export default function Home() {
   return (
@@ -81,27 +82,11 @@ export default function Home() {
       </section>
 
       {/* ====================================================================
-          4. SECCIÓN VENDER MANGA (ANCLAJE TEMPORAL)
-          Conserva el identificador #vender y el encabezado original para evitar
-          enlaces rotos en la navegación hasta su migración funcional completa.
+          4. SECCIÓN VENDER MANGA
+          Formulario interactivo para enviar solicitudes de venta conectadas
+          con el endpoint real del backend (POST /api/solicitudes).
           ==================================================================== */}
-      <section
-        id="vender"
-        className="max-w-[var(--max-ancho)] mx-auto px-5 sm:px-6 md:px-[30px] py-[50px] md:py-[var(--espacio-grande)] text-center"
-      >
-        <h2 className="text-[1.8rem] md:text-[2.2rem] font-bold mb-[15px] text-[var(--color-texto)]">
-          Vender manga
-        </h2>
-        <p className="max-w-[600px] mx-auto text-[var(--color-texto-secundario)] mb-8">
-          ¿Tienes mangas que ya no lees? Puedes venderlos con nosotros.
-        </p>
-
-        <div className="max-w-[600px] mx-auto p-8 border border-dashed border-[var(--color-borde)] rounded-[var(--radio)] bg-[var(--color-blanco)] text-center transition-colors duration-200">
-          <p className="text-base text-[var(--color-texto-secundario)]">
-            El formulario de venta y solicitud para publicar mangas se integrará en las etapas posteriores de la migración.
-          </p>
-        </div>
-      </section>
+      <SaleSection />
     </div>
   );
 }
