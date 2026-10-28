@@ -10,3 +10,12 @@ export interface CartItem {
   imagen: string;
   cantidad: number;
 }
+
+/**
+ * Datos requeridos para agregar un manga al carrito de compras.
+ * Compatible con objetos Manga y CartItem.
+ * La cantidad es opcional (por defecto 1).
+ */
+export type CartItemInput = Pick<CartItem, "id" | "titulo" | "volumen" | "precio" | "imagen"> & {
+  cantidad?: number;
+};

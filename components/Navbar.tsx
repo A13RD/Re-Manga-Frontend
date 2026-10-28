@@ -12,13 +12,15 @@ export function Navbar() {
   const pathname = usePathname();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Cerrar menú móvil al cambiar de ruta
-  useEffect(() => {
+  // Cerrar menú móvil al cambiar de ruta ajustando estado durante el render
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setIsMobileMenuOpen(false);
-  }, [pathname]);
+  }
 
   // Manejar tecla Escape y clics fuera del menú móvil
   useEffect(() => {
@@ -116,7 +118,7 @@ export function Navbar() {
                 : "text-[var(--color-texto)] hover:text-[var(--color-principal)]"
             }`}
           >
-            Carrito (<span className="contador-carrito">{totalItems}</span>)
+            Carrito (<span className="contador-carrito" suppressHydrationWarning>{totalItems}</span>)
           </Link>
 
           {/* Botón de alternancia de tema */}
@@ -140,7 +142,7 @@ export function Navbar() {
             aria-label={`Ver carrito, ${totalItems} unidades`}
             className="text-sm font-semibold px-2 py-1 text-[var(--color-texto)] hover:text-[var(--color-principal)] transition-colors rounded-sm focus-visible:outline-2 focus-visible:outline-[var(--color-principal)]"
           >
-            🛒 (<span className="contador-carrito">{totalItems}</span>)
+            🛒 (<span className="contador-carrito" suppressHydrationWarning>{totalItems}</span>)
           </Link>
 
           {/* Botón de tema en móvil */}
@@ -252,7 +254,7 @@ export function Navbar() {
                   : "text-[var(--color-texto)] hover:bg-[var(--color-superficie-secundaria)] hover:text-[var(--color-principal)]"
               }`}
             >
-              Carrito (<span className="contador-carrito">{totalItems}</span>)
+              Carrito (<span className="contador-carrito" suppressHydrationWarning>{totalItems}</span>)
             </Link>
           </div>
         </div>

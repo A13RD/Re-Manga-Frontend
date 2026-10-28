@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import type { Manga } from "@/types/manga";
 import { formatearPrecioCOP } from "@/data/mangas";
+import { useCart } from "@/context/CartContext";
 
 interface MangaCardProps {
   manga: Manga;
@@ -15,19 +16,23 @@ interface MangaCardProps {
  * Presenta portada, género, título, volumen, autor, condición física, precio y botón de acción.
  */
 export function MangaCard({ manga, priority = false }: MangaCardProps) {
+  const { agregarAlCarrito } = useCart();
   const [imageError, setImageError] = useState<boolean>(false);
+  const [agregadoReciente, setAgregadoReciente] = useState<boolean>(false);
 
   /**
-   * NOTA DE INTEGRACIÓN (Etapa 5.2-A):
-   * La acción funcional completa del carrito (persistencia, sincronización de estado global
-   * y cálculo de resumen) se integrará en las etapas posteriores.
-   * Este manejador mantiene el componente listo sin simular compras falsas ni alterar datos ficticios.
+   * Manejador de evento al pulsar "Agregar al carrito".
+   * Agrega el manga al estado compartido o incrementa su cantidad si ya existe.
+   * Evita cualquier navegación accidental y muestra una confirmación visual local.
    */
-  const handleAgregarAlCarrito = () => {
-    // Acción visual preparada para futura integración con el contexto del carrito
-    console.info(
-      `[Re-Manga] Selección de "${manga.titulo}" (Vol. ${manga.volumen}). Acción preparada para integración del carrito.`
-    );
+  const handleAgregarAlCarrito = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    agregarAlCarrito(manga);
+
+    setAgregadoReciente(true);
+    setTimeout(() => {
+      setAgregadoReciente(false);
+    }, 1200);
   };
 
   return (
@@ -91,15 +96,19 @@ export function MangaCard({ manga, priority = false }: MangaCardProps) {
           {formatearPrecioCOP(manga.precio)}
         </strong>
 
-        {/* Botón de añadir al carrito (acción visual preparada para próxima etapa) */}
+        {/* Botón de añadir al carrito con confirmación visual local de adición */}
         <button
           type="button"
-          className="btn-agregar-carrito w-full mt-[18px] border border-[var(--color-principal)] rounded-full bg-[var(--color-principal)] text-[var(--color-blanco)] py-3 px-[18px] font-bold text-base cursor-pointer transition-all duration-200 hover:bg-[var(--color-principal-hover)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-3 focus-visible:outline-[rgba(230,57,70,0.35)] focus-visible:outline-offset-2"
+          className={`btn-agregar-carrito w-full mt-[18px] border rounded-full py-3 px-[18px] font-bold text-base cursor-pointer transition-all duration-200 active:translate-y-0 focus-visible:outline-3 focus-visible:outline-[rgba(230,57,70,0.35)] focus-visible:outline-offset-2 ${
+            agregadoReciente
+              ? "bg-[#2b8a3e] border-[#2b8a3e] text-[var(--color-blanco)] shadow-sm"
+              : "bg-[var(--color-principal)] border-[var(--color-principal)] text-[var(--color-blanco)] hover:bg-[var(--color-principal-hover)] hover:-translate-y-0.5"
+          }`}
           data-id={manga.id}
           onClick={handleAgregarAlCarrito}
           aria-label={`Agregar ${manga.titulo} tomo ${manga.volumen} al carrito`}
         >
-          Agregar al carrito
+          {agregadoReciente ? "¡Agregado al carrito!" : "Agregar al carrito"}
         </button>
       </div>
     </article>
