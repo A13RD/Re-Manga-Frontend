@@ -12,7 +12,13 @@ import type { CartItem, CartItemInput } from "@/types/cart";
 export interface CartContextType {
   items: CartItem[];
   totalItems: number;
+  totalPrecio: number;
   agregarAlCarrito: (manga: CartItemInput) => void;
+  incrementarCantidad: (id: number) => void;
+  disminuirCantidad: (id: number) => void;
+  cambiarCantidad: (id: number, cantidad: number) => void;
+  eliminarDelCarrito: (id: number) => void;
+  vaciarCarrito: () => void;
   estaEnCarrito: (id: number) => boolean;
   obtenerCantidad: (id: number) => number;
   refreshCart: () => void;
@@ -111,6 +117,23 @@ export function calcularTotalUnidades(items: CartItem[]): number {
   }, 0);
 }
 
+/**
+ * Calcula el costo monetario total sumando el subtotal de cada producto (precio × cantidad).
+ */
+export function calcularTotalPrecio(items: CartItem[]): number {
+  return items.reduce((total, item) => {
+    const precio =
+      typeof item.precio === "number" && Number.isFinite(item.precio)
+        ? item.precio
+        : 0;
+    const cantidad =
+      typeof item.cantidad === "number" && Number.isFinite(item.cantidad)
+        ? item.cantidad
+        : 0;
+    return total + Math.max(0, precio * cantidad);
+  }, 0);
+}
+
 // ============================================================================
 // GESTOR DE ESTADO EXTERNO CON useSyncExternalStore
 // Evita desincronizaciones, bucles de renderizado y discrepancias de hidratación SSR.
@@ -176,8 +199,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     getServerSnapshot
   );
 
-  // El total de unidades se deriva de manera memoizada
+  // El total de unidades y el total monetario se derivan de manera memoizada
   const totalItems = useMemo(() => calcularTotalUnidades(items), [items]);
+  const totalPrecio = useMemo(() => calcularTotalPrecio(items), [items]);
 
   /**
    * Agrega un manga al carrito o incrementa su cantidad si ya existe.
@@ -220,6 +244,70 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
+   * Incrementa en una unidad la cantidad de un manga específico en el carrito.
+   */
+  const incrementarCantidad = useCallback((id: number) => {
+    const elementosActuales = leerCarritoDesdeStorage();
+    const nuevosElementos = elementosActuales.map((item) =>
+      item.id === id ? { ...item, cantidad: item.cantidad + 1 } : item
+    );
+    guardarCarritoEnStorage(nuevosElementos);
+  }, []);
+
+  /**
+   * Disminuye en una unidad la cantidad de un manga específico.
+   * Si la cantidad llega a cero, el elemento se elimina del carrito respetando el comportamiento original.
+   */
+  const disminuirCantidad = useCallback((id: number) => {
+    const elementosActuales = leerCarritoDesdeStorage();
+    const itemExistente = elementosActuales.find((item) => item.id === id);
+    if (!itemExistente) return;
+
+    if (itemExistente.cantidad <= 1) {
+      // Al llegar a 0 se elimina el elemento
+      const nuevosElementos = elementosActuales.filter((item) => item.id !== id);
+      guardarCarritoEnStorage(nuevosElementos);
+    } else {
+      const nuevosElementos = elementosActuales.map((item) =>
+        item.id === id ? { ...item, cantidad: item.cantidad - 1 } : item
+      );
+      guardarCarritoEnStorage(nuevosElementos);
+    }
+  }, []);
+
+  /**
+   * Modifica directamente la cantidad de un manga. Si la cantidad es menor o igual a cero, se elimina.
+   */
+  const cambiarCantidad = useCallback((id: number, cantidad: number) => {
+    const elementosActuales = leerCarritoDesdeStorage();
+    if (cantidad <= 0) {
+      const nuevosElementos = elementosActuales.filter((item) => item.id !== id);
+      guardarCarritoEnStorage(nuevosElementos);
+    } else {
+      const nuevosElementos = elementosActuales.map((item) =>
+        item.id === id ? { ...item, cantidad } : item
+      );
+      guardarCarritoEnStorage(nuevosElementos);
+    }
+  }, []);
+
+  /**
+   * Elimina un producto específico del carrito por su ID.
+   */
+  const eliminarDelCarrito = useCallback((id: number) => {
+    const elementosActuales = leerCarritoDesdeStorage();
+    const nuevosElementos = elementosActuales.filter((item) => item.id !== id);
+    guardarCarritoEnStorage(nuevosElementos);
+  }, []);
+
+  /**
+   * Elimina todos los elementos del carrito y persiste el estado vacío en localStorage.
+   */
+  const vaciarCarrito = useCallback(() => {
+    guardarCarritoEnStorage([]);
+  }, []);
+
+  /**
    * Determina si un manga con el id especificado se encuentra en el carrito.
    */
   const estaEnCarrito = useCallback(
@@ -253,12 +341,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     () => ({
       items,
       totalItems,
+      totalPrecio,
       agregarAlCarrito,
+      incrementarCantidad,
+      disminuirCantidad,
+      cambiarCantidad,
+      eliminarDelCarrito,
+      vaciarCarrito,
       estaEnCarrito,
       obtenerCantidad,
       refreshCart,
     }),
-    [items, totalItems, agregarAlCarrito, estaEnCarrito, obtenerCantidad, refreshCart]
+    [
+      items,
+      totalItems,
+      totalPrecio,
+      agregarAlCarrito,
+      incrementarCantidad,
+      disminuirCantidad,
+      cambiarCantidad,
+      eliminarDelCarrito,
+      vaciarCarrito,
+      estaEnCarrito,
+      obtenerCantidad,
+      refreshCart,
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
