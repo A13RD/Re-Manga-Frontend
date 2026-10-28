@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import Link from "next/link";
+import type { RegistroPayload, RegistroResponse, ApiErrorResponse } from "@/types/auth";
 
 interface FormValues {
   nombre: string;
@@ -74,6 +75,7 @@ export function RegistroContent() {
   const [errores, setErrores] = useState<FormErrors>({});
   const [mensajeFeedback, setMensajeFeedback] = useState<string>("");
   const [esExito, setEsExito] = useState<boolean>(false);
+  const [cargando, setCargando] = useState<boolean>(false);
 
   // Referencias a los campos para foco accesible en el primer error
   const nombreRef = useRef<HTMLInputElement>(null);
@@ -104,9 +106,13 @@ export function RegistroContent() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    // Prevención de envíos duplicados si la petición ya está en curso
+    if (cargando) return;
+
+    // Validación del lado del cliente previa al envío
     const nuevosErrores = validarRegistro(valores);
     setErrores(nuevosErrores);
 
@@ -127,14 +133,84 @@ export function RegistroContent() {
       return;
     }
 
-    // En esta etapa NO se almacenan contraseñas en localStorage ni sessionStorage,
-    // y no se realizan llamadas a endpoints de backend todavía no conectados.
-    setEsExito(true);
-    setMensajeFeedback(
-      "¡Validación local exitosa! Los datos son correctos. La creación real de cuentas se conectará con el backend en la siguiente etapa."
-    );
-    setValores(VALORES_INICIALES);
-    setErrores({});
+    // Inicio de estado de carga
+    setCargando(true);
+    setMensajeFeedback("");
+    setEsExito(false);
+
+    // Configuración segura de la URL base desde variable de entorno con fallback al puerto acordado (4000)
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/+$/, "");
+    const endpoint = `${baseUrl}/api/auth/register`;
+
+    // Enviar únicamente los campos requeridos por el registro (sin confirmación de contraseña ni datos ficticios)
+    const payload: RegistroPayload = {
+      nombre: valores.nombre.trim(),
+      email: valores.email.trim().toLowerCase(),
+      password: valores.password,
+    };
+
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      let data: (RegistroResponse & ApiErrorResponse) | null = null;
+      try {
+        data = await res.json();
+      } catch {
+        // Respuesta sin cuerpo JSON
+      }
+
+      if (res.ok) {
+        // Registro exitoso confirmado por el servidor (201 Created o 200 OK)
+        // No se asume inicio de sesión persistente ni se almacena la contraseña
+        setEsExito(true);
+        setMensajeFeedback(
+          data?.message || "¡Registro exitoso! Tu cuenta ha sido creada. Podrás iniciar sesión próximamente."
+        );
+        // Restablecer el formulario tras confirmación exitosa
+        setValores(VALORES_INICIALES);
+        setErrores({});
+      } else if (res.status === 409) {
+        // Conflicto: correo ya registrado
+        setEsExito(false);
+        const mensajeConflicto =
+          data?.message || "No se puede registrar este correo porque ya existe una cuenta.";
+        setErrores((prev) => ({ ...prev, email: mensajeConflicto }));
+        setMensajeFeedback(mensajeConflicto);
+        emailRef.current?.focus();
+      } else if (res.status === 400) {
+        // Error de validación del backend
+        setEsExito(false);
+        setMensajeFeedback(
+          data?.message || data?.error || "Los datos proporcionados no son válidos. Por favor, revísalos."
+        );
+      } else if (res.status === 404) {
+        // Endpoint no disponible o no implementado en el backend
+        setEsExito(false);
+        setMensajeFeedback(
+          "El endpoint de registro no se encuentra disponible en el backend (HTTP 404). Verifica que el servicio esté implementado."
+        );
+      } else {
+        // Otros códigos de error (500, etc.) sin exponer información sensible ni trazas internas
+        setEsExito(false);
+        setMensajeFeedback(
+          data?.message || `Error en el servidor (HTTP ${res.status}). Por favor, intenta de nuevo más tarde.`
+        );
+      }
+    } catch {
+      // Error de red (backend no iniciado, timeout o bloqueo de conexión)
+      setEsExito(false);
+      setMensajeFeedback(
+        "No fue posible conectar con el servidor. Asegúrate de que el backend esté en ejecución y accesible."
+      );
+    } finally {
+      setCargando(false);
+    }
   };
 
   return (
@@ -154,7 +230,7 @@ export function RegistroContent() {
             Únete a la comunidad de lectores de Re-Manga.
           </p>
 
-          <form id="formulario-registro" onSubmit={handleSubmit} noValidate>
+          <form id="formulario-registro" onSubmit={handleSubmit} noValidate aria-busy={cargando}>
             {/* Campo: Nombre completo */}
             <div className="campo-formulario mb-5">
               <label
@@ -300,9 +376,42 @@ export function RegistroContent() {
             {/* Botón de envío */}
             <button
               type="submit"
-              className="boton-registro w-full border-0 rounded-[var(--radio)] py-[13px] px-[18px] bg-[var(--color-principal)] text-[var(--color-blanco)] cursor-pointer font-bold text-base transition-all duration-200 hover:bg-[var(--color-principal-hover)] hover:-translate-y-0.5 active:translate-y-0 shadow-sm hover:shadow-md focus-visible:outline-3 focus-visible:outline-[rgba(230,57,70,0.35)] focus-visible:outline-offset-2"
+              disabled={cargando}
+              aria-busy={cargando}
+              className={`boton-registro w-full border-0 rounded-[var(--radio)] py-[13px] px-[18px] bg-[var(--color-principal)] text-[var(--color-blanco)] font-bold text-base transition-all duration-200 shadow-sm focus-visible:outline-3 focus-visible:outline-[rgba(230,57,70,0.35)] focus-visible:outline-offset-2 flex items-center justify-center gap-2 ${
+                cargando
+                  ? "opacity-70 cursor-not-allowed"
+                  : "cursor-pointer hover:bg-[var(--color-principal-hover)] hover:-translate-y-0.5 active:translate-y-0 hover:shadow-md"
+              }`}
             >
-              Registrarme
+              {cargando ? (
+                <>
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  <span>Registrando...</span>
+                </>
+              ) : (
+                "Registrarme"
+              )}
             </button>
 
             {/* Mensaje de estado tras envío */}
@@ -314,7 +423,7 @@ export function RegistroContent() {
                   : "text-[var(--color-principal)]"
               }`}
               aria-live="polite"
-              role={esExito ? "status" : undefined}
+              role={esExito ? "status" : "alert"}
             >
               {mensajeFeedback}
             </p>
