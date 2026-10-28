@@ -1,4 +1,4 @@
-import React from "react";
+import { CatalogSection } from "@/components/CatalogSection";
 
 export default function Home() {
   return (
@@ -20,27 +20,11 @@ export default function Home() {
       </section>
 
       {/* ====================================================================
-          2. SECCIÓN CATÁLOGO (ANCLAJE TEMPORAL)
-          Conserva el identificador #catalogo y el encabezado original para evitar
-          enlaces rotos en la navegación hasta su migración funcional completa.
+          2. SECCIÓN CATÁLOGO
+          Catálogo interactivo con filtros por género, búsqueda en tiempo real,
+          tarjetas visuales de manga y paginación con "Ver más".
           ==================================================================== */}
-      <section
-        id="catalogo"
-        className="max-w-[var(--max-ancho)] mx-auto px-5 sm:px-6 md:px-[30px] py-[50px] md:py-[var(--espacio-grande)]"
-      >
-        <h2 className="text-[1.8rem] md:text-[2.2rem] font-bold mb-[15px] text-[var(--color-texto)]">
-          Catálogo
-        </h2>
-        <p className="text-[var(--color-texto-secundario)] mb-8">
-          Explora nuestra colección de mangas de segunda mano.
-        </p>
-
-        <div className="p-8 border border-dashed border-[var(--color-borde)] rounded-[var(--radio)] bg-[var(--color-blanco)] text-center transition-colors duration-200">
-          <p className="text-base text-[var(--color-texto-secundario)]">
-            El catálogo interactivo con filtros de género, buscador y tarjetas dinámicas se integrará en la siguiente etapa de migración.
-          </p>
-        </div>
-      </section>
+      <CatalogSection />
 
       {/* ====================================================================
           3. SECCIÓN CÓMO FUNCIONA
