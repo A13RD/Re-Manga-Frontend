@@ -99,6 +99,17 @@ export function Navbar() {
             Vender
           </Link>
           <Link
+            href="/login"
+            aria-current={pathname === "/login" || pathname === "/iniciar-sesion" ? "page" : undefined}
+            className={`text-[0.95rem] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm ${
+              pathname === "/login" || pathname === "/iniciar-sesion"
+                ? "text-[var(--color-principal)]"
+                : "text-[var(--color-texto)] hover:text-[var(--color-principal)]"
+            }`}
+          >
+            Iniciar sesión
+          </Link>
+          <Link
             href="/registro"
             aria-current={pathname === "/registro" ? "page" : undefined}
             className={`text-[0.95rem] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm ${
@@ -231,6 +242,18 @@ export function Navbar() {
               className="px-3 py-2.5 rounded-[var(--radio)] text-base font-semibold text-[var(--color-texto)] hover:bg-[var(--color-superficie-secundaria)] hover:text-[var(--color-principal)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)]"
             >
               Vender
+            </Link>
+            <Link
+              href="/login"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-current={pathname === "/login" || pathname === "/iniciar-sesion" ? "page" : undefined}
+              className={`px-3 py-2.5 rounded-[var(--radio)] text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] ${
+                pathname === "/login" || pathname === "/iniciar-sesion"
+                  ? "bg-[var(--color-superficie-secundaria)] text-[var(--color-principal)]"
+                  : "text-[var(--color-texto)] hover:bg-[var(--color-superficie-secundaria)] hover:text-[var(--color-principal)]"
+              }`}
+            >
+              Iniciar sesión
             </Link>
             <Link
               href="/registro"

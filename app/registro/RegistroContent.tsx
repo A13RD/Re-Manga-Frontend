@@ -429,15 +429,27 @@ export function RegistroContent() {
             </p>
           </form>
 
-          {/* Enlace de regreso al catálogo */}
-          <p className="enlace-catalogo text-center mt-[25px]">
-            <Link
-              href="/#catalogo"
-              className="text-[var(--color-principal)] font-bold hover:underline transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm"
-            >
-              Volver al catálogo
-            </Link>
-          </p>
+          {/* Enlaces de navegación: Iniciar sesión y Catálogo */}
+          <div className="mt-6 pt-5 border-t border-[var(--color-borde)] text-center space-y-3">
+            <p className="text-sm text-[var(--color-texto-secundario)]">
+              ¿Ya tienes una cuenta?{" "}
+              <Link
+                href="/login"
+                className="text-[var(--color-principal)] font-bold hover:underline transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm"
+              >
+                Inicia sesión aquí
+              </Link>
+            </p>
+
+            <p className="enlace-catalogo">
+              <Link
+                href="/#catalogo"
+                className="text-sm text-[var(--color-texto-secundario)] hover:text-[var(--color-principal)] hover:underline transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm"
+              >
+                ← Volver al catálogo
+              </Link>
+            </p>
+          </div>
         </div>
       </section>
     </main>
