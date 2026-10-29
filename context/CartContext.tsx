@@ -14,13 +14,13 @@ export interface CartContextType {
   totalItems: number;
   totalPrecio: number;
   agregarAlCarrito: (manga: CartItemInput) => void;
-  incrementarCantidad: (id: number) => void;
-  disminuirCantidad: (id: number) => void;
-  cambiarCantidad: (id: number, cantidad: number) => void;
-  eliminarDelCarrito: (id: number) => void;
+  incrementarCantidad: (id: string | number) => void;
+  disminuirCantidad: (id: string | number) => void;
+  cambiarCantidad: (id: string | number, cantidad: number) => void;
+  eliminarDelCarrito: (id: string | number) => void;
   vaciarCarrito: () => void;
-  estaEnCarrito: (id: number) => boolean;
-  obtenerCantidad: (id: number) => number;
+  estaEnCarrito: (id: string | number) => boolean;
+  obtenerCantidad: (id: string | number) => number;
   refreshCart: () => void;
 }
 
@@ -65,8 +65,7 @@ export function leerCarritoDesdeStorage(): CartItem[] {
       return (
         item !== null &&
         typeof item === "object" &&
-        typeof item.id === "number" &&
-        Number.isFinite(item.id) &&
+        (typeof item.id === "number" || (typeof item.id === "string" && item.id.trim().length > 0)) &&
         typeof item.titulo === "string" &&
         item.titulo.trim().length > 0 &&
         typeof item.volumen === "number" &&
@@ -210,7 +209,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const agregarAlCarrito = useCallback((manga: CartItemInput) => {
     const elementosActuales = leerCarritoDesdeStorage();
     const indiceExistente = elementosActuales.findIndex(
-      (item) => item.id === manga.id
+      (item) => String(item.id) === String(manga.id)
     );
 
     const cantidadAAgregar =
@@ -246,10 +245,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   /**
    * Incrementa en una unidad la cantidad de un manga específico en el carrito.
    */
-  const incrementarCantidad = useCallback((id: number) => {
+  const incrementarCantidad = useCallback((id: string | number) => {
     const elementosActuales = leerCarritoDesdeStorage();
     const nuevosElementos = elementosActuales.map((item) =>
-      item.id === id ? { ...item, cantidad: item.cantidad + 1 } : item
+      String(item.id) === String(id) ? { ...item, cantidad: item.cantidad + 1 } : item
     );
     guardarCarritoEnStorage(nuevosElementos);
   }, []);
@@ -258,18 +257,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
    * Disminuye en una unidad la cantidad de un manga específico.
    * Si la cantidad llega a cero, el elemento se elimina del carrito respetando el comportamiento original.
    */
-  const disminuirCantidad = useCallback((id: number) => {
+  const disminuirCantidad = useCallback((id: string | number) => {
     const elementosActuales = leerCarritoDesdeStorage();
-    const itemExistente = elementosActuales.find((item) => item.id === id);
+    const itemExistente = elementosActuales.find((item) => String(item.id) === String(id));
     if (!itemExistente) return;
 
     if (itemExistente.cantidad <= 1) {
       // Al llegar a 0 se elimina el elemento
-      const nuevosElementos = elementosActuales.filter((item) => item.id !== id);
+      const nuevosElementos = elementosActuales.filter((item) => String(item.id) !== String(id));
       guardarCarritoEnStorage(nuevosElementos);
     } else {
       const nuevosElementos = elementosActuales.map((item) =>
-        item.id === id ? { ...item, cantidad: item.cantidad - 1 } : item
+        String(item.id) === String(id) ? { ...item, cantidad: item.cantidad - 1 } : item
       );
       guardarCarritoEnStorage(nuevosElementos);
     }
@@ -278,14 +277,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   /**
    * Modifica directamente la cantidad de un manga. Si la cantidad es menor o igual a cero, se elimina.
    */
-  const cambiarCantidad = useCallback((id: number, cantidad: number) => {
+  const cambiarCantidad = useCallback((id: string | number, cantidad: number) => {
     const elementosActuales = leerCarritoDesdeStorage();
     if (cantidad <= 0) {
-      const nuevosElementos = elementosActuales.filter((item) => item.id !== id);
+      const nuevosElementos = elementosActuales.filter((item) => String(item.id) !== String(id));
       guardarCarritoEnStorage(nuevosElementos);
     } else {
       const nuevosElementos = elementosActuales.map((item) =>
-        item.id === id ? { ...item, cantidad } : item
+        String(item.id) === String(id) ? { ...item, cantidad } : item
       );
       guardarCarritoEnStorage(nuevosElementos);
     }
@@ -294,9 +293,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   /**
    * Elimina un producto específico del carrito por su ID.
    */
-  const eliminarDelCarrito = useCallback((id: number) => {
+  const eliminarDelCarrito = useCallback((id: string | number) => {
     const elementosActuales = leerCarritoDesdeStorage();
-    const nuevosElementos = elementosActuales.filter((item) => item.id !== id);
+    const nuevosElementos = elementosActuales.filter((item) => String(item.id) !== String(id));
     guardarCarritoEnStorage(nuevosElementos);
   }, []);
 
@@ -311,8 +310,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
    * Determina si un manga con el id especificado se encuentra en el carrito.
    */
   const estaEnCarrito = useCallback(
-    (id: number): boolean => {
-      return items.some((item) => item.id === id);
+    (id: string | number): boolean => {
+      return items.some((item) => String(item.id) === String(id));
     },
     [items]
   );
@@ -321,8 +320,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
    * Retorna la cantidad de unidades en el carrito para un manga específico.
    */
   const obtenerCantidad = useCallback(
-    (id: number): number => {
-      const encontrado = items.find((item) => item.id === id);
+    (id: string | number): number => {
+      const encontrado = items.find((item) => String(item.id) === String(id));
       return encontrado ? encontrado.cantidad : 0;
     },
     [items]

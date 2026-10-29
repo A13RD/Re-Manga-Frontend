@@ -39,7 +39,7 @@ export function MangaCard({ manga, priority = false }: MangaCardProps) {
     <article className="manga-card flex flex-col h-full bg-[var(--color-blanco)] border border-[var(--color-borde)] rounded-[var(--radio)] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_10px_25px_var(--color-sombra)]">
       {/* Contenedor de la portada con dimensiones fijas para evitar CLS */}
       <div className="relative w-full h-[320px] max-sm:h-[350px] bg-[var(--color-superficie-secundaria)] flex items-center justify-center overflow-hidden">
-        {imageError ? (
+        {imageError || !manga.imagen ? (
           <div
             className="w-full h-full flex flex-col items-center justify-center p-4 text-center text-[var(--color-texto-secundario)] bg-[var(--color-superficie-secundaria)]"
             role="img"
@@ -69,6 +69,7 @@ export function MangaCard({ manga, priority = false }: MangaCardProps) {
             sizes="(max-width: 600px) 100vw, (max-width: 900px) 50vw, 33vw"
             className="object-contain block transition-transform duration-200 hover:scale-[1.02]"
             priority={priority}
+            unoptimized={Boolean(manga.imagen && (manga.imagen.startsWith("http://") || manga.imagen.startsWith("https://")))}
             onError={() => setImageError(true)}
           />
         )}
@@ -85,7 +86,7 @@ export function MangaCard({ manga, priority = false }: MangaCardProps) {
         </h3>
 
         <p className="manga-volumen text-[0.9rem] text-[var(--color-texto-secundario)] mb-2.5">
-          Tomo {manga.volumen} · {manga.autor}
+          {manga.volumen ? `Tomo ${manga.volumen}` : "Tomo único"} · {manga.autor || "Autor"}
         </p>
 
         <p className="manga-estado text-[0.9rem] text-[var(--color-texto-secundario)] mb-[15px]">
@@ -104,7 +105,7 @@ export function MangaCard({ manga, priority = false }: MangaCardProps) {
               ? "bg-[#2b8a3e] border-[#2b8a3e] text-[var(--color-blanco)] shadow-sm"
               : "bg-[var(--color-principal)] border-[var(--color-principal)] text-[var(--color-blanco)] hover:bg-[var(--color-principal-hover)] hover:-translate-y-0.5"
           }`}
-          data-id={manga.id}
+          data-id={String(manga.id)}
           onClick={handleAgregarAlCarrito}
           aria-label={`Agregar ${manga.titulo} tomo ${manga.volumen} al carrito`}
         >

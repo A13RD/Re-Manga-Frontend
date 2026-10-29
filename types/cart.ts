@@ -3,7 +3,7 @@
  * Compatible con la estructura existente en localStorage del frontend original.
  */
 export interface CartItem {
-  id: number;
+  id: string | number;
   titulo: string;
   volumen: number;
   precio: number;
