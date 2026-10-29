@@ -77,6 +77,26 @@ export interface MangaQueryOptions {
 }
 
 /**
+ * Datos requeridos para registrar un nuevo manga en el catálogo (solo ADMIN).
+ */
+export interface CreateMangaPayload {
+  title: string;
+  volume?: number | null;
+  author: string;
+  genre: string;
+  description: string;
+  image?: string | null;
+  price: number;
+  condition: string;
+  stock: number;
+}
+
+/**
+ * Datos para actualizar un manga existente (solo ADMIN).
+ */
+export type UpdateMangaPayload = Partial<CreateMangaPayload>;
+
+/**
  * Traduce el código de condición en inglés del backend a una etiqueta legible en español.
  */
 export function formatearCondicion(condition?: string | null): string {

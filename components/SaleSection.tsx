@@ -278,16 +278,24 @@ export function SaleSection() {
 
         {/* Indicador de usuario autenticado */}
         {!authLoading && isAuthenticated && user && (
-          <div className="mb-6 p-3 rounded-[var(--radio)] border border-[var(--color-borde)] bg-[var(--color-superficie-secundaria)] flex items-center justify-between text-xs sm:text-sm text-[var(--color-texto-secundario)]">
+          <div className="mb-6 p-3.5 rounded-[var(--radio)] border border-[var(--color-borde)] bg-[var(--color-superficie-secundaria)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs sm:text-sm text-[var(--color-texto-secundario)]">
             <span>
               Publicando como:{" "}
               <strong className="text-[var(--color-texto)] font-semibold">
                 {user.nombre || user.name || user.email}
               </strong>
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[#238636]/15 text-[#238636] dark:text-[#3fb950] font-bold">
-              Cuenta activa
-            </span>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/mis-solicitudes"
+                className="text-xs font-bold text-[var(--color-principal)] hover:underline"
+              >
+                Mis solicitudes →
+              </Link>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[#238636]/15 text-[#238636] dark:text-[#3fb950] font-bold">
+                Activa
+              </span>
+            </div>
           </div>
         )}
 

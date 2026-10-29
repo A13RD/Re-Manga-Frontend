@@ -28,7 +28,12 @@ export function Navbar() {
   const handleLogout = () => {
     logout();
     setIsMobileMenuOpen(false);
-    if (pathname === "/vender") {
+    if (
+      pathname === "/vender" ||
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/perfil") ||
+      pathname.startsWith("/mis-solicitudes")
+    ) {
       router.push("/");
     }
   };
@@ -112,21 +117,32 @@ export function Navbar() {
             Vender
           </Link>
           {mostrarSesionActiva ? (
-            <div className="flex items-center gap-3">
-              <span
-                className="text-[0.95rem] font-semibold text-[var(--color-texto)] flex items-center gap-1.5"
+            <div className="flex items-center gap-4">
+              {user?.role?.toUpperCase() === "ADMIN" && (
+                <Link
+                  href="/admin"
+                  aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+                  className={`text-[0.95rem] font-bold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm ${
+                    pathname.startsWith("/admin")
+                      ? "text-[var(--color-principal)]"
+                      : "text-[var(--color-texto)] hover:text-[var(--color-principal)]"
+                  }`}
+                >
+                  Admin
+                </Link>
+              )}
+              <Link
+                href="/perfil"
+                aria-current={pathname.startsWith("/perfil") ? "page" : undefined}
+                className={`text-[0.95rem] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm ${
+                  pathname.startsWith("/perfil")
+                    ? "text-[var(--color-principal)]"
+                    : "text-[var(--color-texto)] hover:text-[var(--color-principal)]"
+                }`}
                 title={user?.email}
               >
-                <span className="text-[var(--color-texto-secundario)] font-normal text-xs">Hola,</span>
-                <span className="truncate max-w-[130px] font-bold">
-                  {user?.nombre || user?.name || user?.email}
-                </span>
-                {user?.role === "admin" && (
-                  <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[var(--color-principal)] text-[var(--color-blanco)] font-bold">
-                    Admin
-                  </span>
-                )}
-              </span>
+                Mi cuenta
+              </Link>
               <button
                 type="button"
                 onClick={handleLogout}
@@ -287,19 +303,51 @@ export function Navbar() {
             </Link>
             {mostrarSesionActiva ? (
               <>
-                <div className="px-3 py-2.5 rounded-[var(--radio)] bg-[var(--color-superficie-secundaria)] border border-[var(--color-borde)] flex items-center justify-between">
+                <Link
+                  href="/perfil"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="px-3 py-2.5 rounded-[var(--radio)] bg-[var(--color-superficie-secundaria)] border border-[var(--color-borde)] flex items-center justify-between"
+                >
                   <div className="flex flex-col">
                     <span className="text-xs text-[var(--color-texto-secundario)]">Conectado como</span>
-                    <span className="text-sm font-bold text-[var(--color-texto)] truncate max-w-[200px]">
+                    <span className="text-sm font-bold text-[var(--color-texto)] truncate max-w-[180px]">
                       {user?.nombre || user?.name || user?.email}
                     </span>
                   </div>
-                  {user?.role === "admin" && (
-                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[var(--color-principal)] text-[var(--color-blanco)] font-bold">
-                      Admin
-                    </span>
-                  )}
-                </div>
+                  <span
+                    className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded font-bold ${
+                      user?.role?.toUpperCase() === "ADMIN"
+                        ? "bg-[var(--color-principal)] text-[var(--color-blanco)]"
+                        : "bg-[#238636]/15 text-[#238636] dark:text-[#3fb950]"
+                    }`}
+                  >
+                    {user?.role || "USER"}
+                  </span>
+                </Link>
+                {user?.role?.toUpperCase() === "ADMIN" && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`px-3 py-2.5 rounded-[var(--radio)] text-base font-bold transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] ${
+                      pathname.startsWith("/admin")
+                        ? "bg-[var(--color-superficie-secundaria)] text-[var(--color-principal)]"
+                        : "text-[var(--color-texto)] hover:bg-[var(--color-superficie-secundaria)] hover:text-[var(--color-principal)]"
+                    }`}
+                  >
+                    🛠️ Panel Administrador
+                  </Link>
+                )}
+                <Link
+                  href="/mis-solicitudes"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`px-3 py-2.5 rounded-[var(--radio)] text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] ${
+                    pathname.startsWith("/mis-solicitudes")
+                      ? "bg-[var(--color-superficie-secundaria)] text-[var(--color-principal)]"
+                      : "text-[var(--color-texto)] hover:bg-[var(--color-superficie-secundaria)] hover:text-[var(--color-principal)]"
+                  }`}
+                >
+                  📄 Mis solicitudes de venta
+                </Link>
                 <button
                   type="button"
                   onClick={handleLogout}

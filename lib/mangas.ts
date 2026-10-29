@@ -5,6 +5,8 @@ import type {
   Manga,
   MangaPagination,
   BackendManga,
+  CreateMangaPayload,
+  UpdateMangaPayload,
 } from "@/types/manga";
 import { adaptarMangaDesdeBackend } from "@/types/manga";
 
@@ -58,4 +60,28 @@ export async function obtenerMangas(
 export async function obtenerMangaPorId(id: string | number): Promise<Manga> {
   const response = await api.get<BackendManga>(`/api/mangas/${encodeURIComponent(String(id))}`);
   return adaptarMangaDesdeBackend(response);
+}
+
+/**
+ * Crea un nuevo manga en el catálogo (POST /api/mangas) — Exclusivo ADMIN.
+ */
+export async function crearManga(payload: CreateMangaPayload): Promise<BackendManga> {
+  return api.post<BackendManga>("/api/mangas", payload);
+}
+
+/**
+ * Actualiza un manga existente en el catálogo (PUT /api/mangas/:id) — Exclusivo ADMIN.
+ */
+export async function actualizarManga(
+  id: string | number,
+  payload: UpdateMangaPayload
+): Promise<BackendManga> {
+  return api.put<BackendManga>(`/api/mangas/${encodeURIComponent(String(id))}`, payload);
+}
+
+/**
+ * Elimina un manga del catálogo (DELETE /api/mangas/:id) — Exclusivo ADMIN.
+ */
+export async function eliminarManga(id: string | number): Promise<void> {
+  return api.delete<void>(`/api/mangas/${encodeURIComponent(String(id))}`);
 }
