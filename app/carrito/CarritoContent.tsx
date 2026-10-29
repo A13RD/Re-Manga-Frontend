@@ -1,10 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { formatearPrecioCOP } from "@/data/mangas";
+import { crearOrden } from "@/lib/ordenes";
+import type { Order } from "@/types/order";
 
 /**
  * Componente cliente que renderiza la interfaz completa de la página del carrito.
@@ -12,6 +16,8 @@ import { formatearPrecioCOP } from "@/data/mangas";
  * acción para vaciar el carrito con confirmación y cálculo reactivo del total.
  */
 export function CarritoContent() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const {
     items,
     totalPrecio,
@@ -20,6 +26,10 @@ export function CarritoContent() {
     eliminarDelCarrito,
     vaciarCarrito,
   } = useCart();
+
+  const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [orderSuccess, setOrderSuccess] = useState<Order | null>(null);
 
   /**
    * Solicita confirmación nativa al usuario antes de vaciar el carrito,
@@ -33,6 +43,98 @@ export function CarritoContent() {
       }
     }
   };
+
+  /**
+   * Procesa la compra enviando los items al endpoint protegido POST /api/orders.
+   * El backend valida el stock y recalcula los precios reales desde la base de datos.
+   */
+  const handleRealizarCompra = async () => {
+    setOrderError(null);
+
+    if (!isAuthenticated) {
+      router.push("/login?redirect=carrito");
+      return;
+    }
+
+    if (items.length === 0) {
+      setOrderError("Tu carrito está vacío.");
+      return;
+    }
+
+    setIsCheckingOut(true);
+    try {
+      const orderPayload = items.map((item) => ({
+        mangaId: String(item.id),
+        quantity: item.cantidad,
+      }));
+
+      const createdOrder = await crearOrden(orderPayload);
+      vaciarCarrito();
+      setOrderSuccess(createdOrder);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Ocurrió un error al procesar tu compra. Por favor intenta de nuevo.";
+      setOrderError(msg);
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
+
+  if (orderSuccess) {
+    return (
+      <section
+        id="carrito-exito"
+        aria-labelledby="titulo-orden-exitosa"
+        className="max-w-[var(--max-ancho)] mx-auto px-5 sm:px-6 md:px-[30px] py-[40px] md:py-[var(--espacio-grande)] min-h-[60vh]"
+      >
+        <div className="max-w-[650px] mx-auto bg-[var(--color-blanco)] border border-[var(--color-borde)] rounded-[var(--radio)] p-8 sm:p-10 text-center shadow-[0_10px_25px_var(--color-sombra)]">
+          <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 id="titulo-orden-exitosa" className="text-2xl sm:text-3xl font-extrabold text-[var(--color-texto)] mb-2">
+            ¡Compra realizada con éxito!
+          </h1>
+          <p className="text-[var(--color-texto-secundario)] text-base mb-6">
+            Tu pedido ha sido registrado correctamente en la base de datos. El stock ha sido actualizado.
+          </p>
+
+          <div className="bg-[var(--color-superficie-secundaria)] rounded-[var(--radio)] p-5 text-left mb-6 space-y-2 border border-[var(--color-borde)]">
+            <div className="flex justify-between text-sm">
+              <span className="text-[var(--color-texto-secundario)]">N.° de Orden:</span>
+              <span className="font-mono font-bold text-[var(--color-texto)]">{orderSuccess.id}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-[var(--color-texto-secundario)]">Estado:</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{orderSuccess.status}</span>
+            </div>
+            <div className="flex justify-between text-base font-bold pt-2 border-t border-[var(--color-borde)]">
+              <span className="text-[var(--color-texto)]">Total pagado:</span>
+              <span className="text-[var(--color-principal)]">{formatearPrecioCOP(Number(orderSuccess.totalAmount))}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              href="/perfil"
+              className="inline-flex items-center justify-center rounded-full py-3 px-6 bg-[var(--color-principal)] hover:bg-[var(--color-principal-hover)] text-[var(--color-blanco)] font-bold text-base transition-all hover:-translate-y-0.5"
+            >
+              Ver mis compras
+            </Link>
+            <Link
+              href="/#catalogo"
+              className="inline-flex items-center justify-center rounded-full py-3 px-6 border border-[var(--color-borde)] bg-[var(--color-blanco)] text-[var(--color-texto)] hover:bg-[var(--color-superficie-secundaria)] font-bold text-base transition-all hover:-translate-y-0.5"
+            >
+              Seguir explorando
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   const estaVacio = items.length === 0;
 
@@ -187,18 +289,37 @@ export function CarritoContent() {
               </strong>
             </p>
 
+            {orderError && (
+              <div
+                role="alert"
+                className="mt-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-[var(--radio)] text-sm text-red-600 dark:text-red-400"
+              >
+                {orderError}
+              </div>
+            )}
+
             <div className="acciones-carrito flex flex-col gap-3 mt-[22px]">
+              <button
+                id="finalizar-compra"
+                type="button"
+                onClick={handleRealizarCompra}
+                disabled={isCheckingOut}
+                className="boton-carrito boton-principal w-full rounded-full py-3.5 px-[18px] font-bold border border-[var(--color-principal)] bg-[var(--color-principal)] text-[var(--color-blanco)] text-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-principal-hover)] hover:border-[var(--color-principal-hover)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] text-base shadow-sm"
+              >
+                {isCheckingOut ? "Procesando compra..." : "Finalizar compra"}
+              </button>
               <button
                 id="vaciar-carrito"
                 type="button"
                 onClick={handleVaciarCarrito}
-                className="boton-carrito boton-secundario w-full rounded-full py-3 px-[18px] font-bold border border-[#f1b8bf] dark:border-[#5a2e34] bg-[var(--color-blanco)] text-[var(--color-principal)] cursor-pointer transition-all duration-200 hover:bg-[#fff5f5] dark:hover:bg-[#342225] hover:border-[#e78692] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] text-center text-base"
+                disabled={isCheckingOut}
+                className="boton-carrito boton-secundario w-full rounded-full py-3 px-[18px] font-bold border border-[#f1b8bf] dark:border-[#5a2e34] bg-[var(--color-blanco)] text-[var(--color-principal)] cursor-pointer transition-all duration-200 hover:bg-[#fff5f5] dark:hover:bg-[#342225] hover:border-[#e78692] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] text-center text-base"
               >
                 Vaciar carrito
               </button>
               <Link
                 href="/#catalogo"
-                className="boton-carrito boton-principal w-full rounded-full py-3 px-[18px] font-bold border border-[var(--color-principal)] bg-[var(--color-principal)] text-[var(--color-blanco)] text-center cursor-pointer transition-all duration-200 hover:bg-[var(--color-principal-hover)] hover:border-[var(--color-principal-hover)] hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] text-base"
+                className="boton-carrito boton-secundario w-full rounded-full py-3 px-[18px] font-semibold border border-[var(--color-borde)] bg-[var(--color-blanco)] text-[var(--color-texto-secundario)] hover:text-[var(--color-texto)] hover:bg-[var(--color-superficie-secundaria)] text-center cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] text-base"
               >
                 Continuar comprando
               </Link>

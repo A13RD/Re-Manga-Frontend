@@ -2,9 +2,12 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import type { Manga } from "@/types/manga";
 import { formatearPrecioCOP } from "@/data/mangas";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { useFavorites } from "@/context/FavoritesContext";
 
 interface MangaCardProps {
   manga: Manga;
@@ -16,9 +19,35 @@ interface MangaCardProps {
  * Presenta portada, género, título, volumen, autor, condición física, precio y botón de acción.
  */
 export function MangaCard({ manga, priority = false }: MangaCardProps) {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const { agregarAlCarrito } = useCart();
   const [imageError, setImageError] = useState<boolean>(false);
   const [agregadoReciente, setAgregadoReciente] = useState<boolean>(false);
+  const [isTogglingFav, setIsTogglingFav] = useState<boolean>(false);
+
+  const isFav = isFavorite(manga.id);
+
+  const handleToggleFavorite = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      router.push("/login?redirect=catalogo");
+      return;
+    }
+
+    if (isTogglingFav) return;
+    setIsTogglingFav(true);
+    try {
+      await toggleFavorite(manga.id);
+    } catch (err) {
+      console.error("Error al actualizar favorito:", err);
+    } finally {
+      setIsTogglingFav(false);
+    }
+  };
 
   /**
    * Manejador de evento al pulsar "Agregar al carrito".
@@ -73,6 +102,33 @@ export function MangaCard({ manga, priority = false }: MangaCardProps) {
             onError={() => setImageError(true)}
           />
         )}
+
+        {/* Botón de favorito con icono de corazón */}
+        <button
+          type="button"
+          onClick={handleToggleFavorite}
+          disabled={isTogglingFav}
+          aria-label={
+            isFav
+              ? `Eliminar ${manga.titulo} de tus favoritos`
+              : `Agregar ${manga.titulo} a tus favoritos`
+          }
+          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-[var(--color-blanco)]/90 dark:bg-[var(--color-superficie)]/90 backdrop-blur-sm shadow-md border border-[var(--color-borde)] hover:scale-110 active:scale-95 transition-all text-gray-400 hover:text-[#e63946] focus-visible:outline-2 focus-visible:outline-[#e63946]"
+        >
+          <svg
+            className={`w-5 h-5 transition-colors ${
+              isFav ? "text-[#e63946] fill-current" : "fill-none stroke-current"
+            }`}
+            viewBox="0 0 24 24"
+            strokeWidth="2"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Contenido textual de la tarjeta */}
