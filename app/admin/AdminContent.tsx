@@ -148,6 +148,8 @@ export function AdminContent() {
           ? "FAIR"
           : manga.estado === "Nuevo"
           ? "NEW"
+          : manga.estado === "Desgastado"
+          ? "POOR"
           : "GOOD",
       stock: String(manga.stock ?? 1),
       image: manga.imagen || "",
@@ -190,6 +192,14 @@ export function AdminContent() {
     if (!Number.isInteger(stockNum) || stockNum < 0) {
       setFormError("El stock debe ser un número entero mayor o igual a 0.");
       return;
+    }
+
+    if (formValores.volume.trim() !== "") {
+      const volNum = Number(formValores.volume);
+      if (!Number.isInteger(volNum) || volNum <= 0) {
+        setFormError("El volumen debe ser un número entero mayor que 0.");
+        return;
+      }
     }
 
     const payload: CreateMangaPayload = {
