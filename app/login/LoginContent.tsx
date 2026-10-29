@@ -3,8 +3,9 @@
 import React, { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { LoginPayload, LoginResponse, ApiErrorResponse } from "@/types/auth";
+import type { LoginPayload, LoginResponse } from "@/types/auth";
 import { useAuth } from "@/context/AuthContext";
+import { api, ApiError } from "@/lib/api";
 
 interface FormValues {
   email: string;
@@ -54,7 +55,7 @@ function validarLogin(valores: FormValues): FormErrors {
  */
 export function LoginContent() {
   const router = useRouter();
-  const { setAuthenticatedUser } = useAuth();
+  const { login } = useAuth();
 
   const [valores, setValores] = useState<FormValues>(VALORES_INICIALES);
   const [errores, setErrores] = useState<FormErrors>({});
@@ -118,10 +119,6 @@ export function LoginContent() {
     setMensajeFeedback("");
     setEsExito(false);
 
-    // Configuración segura de la URL base desde variable de entorno con fallback al puerto acordado (4000)
-    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/+$/, "");
-    const endpoint = `${baseUrl}/api/auth/login`;
-
     // Enviar exclusivamente los campos requeridos por el contrato
     const payload: LoginPayload = {
       email: valores.email.trim().toLowerCase(),
@@ -129,72 +126,42 @@ export function LoginContent() {
     };
 
     try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        credentials: "include", // Soporte para sesiones mediante cookies HttpOnly seguras
-        body: JSON.stringify(payload),
-      });
+      const data = await api.post<LoginResponse>("/api/auth/login", payload);
 
-      let data: (LoginResponse & ApiErrorResponse) | null = null;
-      try {
-        data = await res.json();
-      } catch {
-        // Respuesta sin cuerpo JSON
+      // Inicio de sesión exitoso (HTTP 200)
+      setEsExito(true);
+      setMensajeFeedback(data?.message || "¡Inicio de sesión exitoso! Redirigiendo...");
+
+      if (data?.token && data?.user) {
+        login(data.token, data.user);
       }
 
-      if (res.ok) {
-        // Inicio de sesión exitoso (200 OK o 201 Created)
-        setEsExito(true);
-        setMensajeFeedback(data?.message || "¡Inicio de sesión exitoso! Redirigiendo...");
+      // Limpiar el campo de contraseña por seguridad
+      setValores(VALORES_INICIALES);
+      setErrores({});
 
-        if (data?.user) {
-          setAuthenticatedUser(data.user);
-        }
-
-        // Limpiar el campo de contraseña por seguridad
-        setValores(VALORES_INICIALES);
-        setErrores({});
-
-        // Redirección a la página principal existente tras un breve instante
-        setTimeout(() => {
-          router.push("/");
-        }, 1000);
-      } else if (res.status === 401 || res.status === 403) {
-        // Credenciales incorrectas o no autorizadas
-        setEsExito(false);
-        const mensajeCredenciales =
-          data?.message || "Correo electrónico o contraseña incorrectos. Por favor, verifica tus datos.";
-        setMensajeFeedback(mensajeCredenciales);
-        passwordRef.current?.focus();
-      } else if (res.status === 400) {
-        // Error de validación proveniente del backend
-        setEsExito(false);
-        setMensajeFeedback(
-          data?.message || data?.error || "Los datos proporcionados no son válidos. Por favor, revísalos."
-        );
-      } else if (res.status === 404) {
-        // Endpoint no disponible o no implementado en el backend
-        setEsExito(false);
-        setMensajeFeedback(
-          "El servicio de inicio de sesión no se encuentra disponible en el backend (HTTP 404). Verifica que el servicio esté implementado."
-        );
-      } else {
-        // Otros errores del servidor (500, etc.)
-        setEsExito(false);
-        setMensajeFeedback(
-          data?.message || `Error en el servidor (HTTP ${res.status}). Por favor, intenta de nuevo más tarde.`
-        );
-      }
-    } catch {
-      // Fallo de conexión de red con el backend
+      // Redirección a la página principal existente tras un breve instante
+      setTimeout(() => {
+        router.push("/");
+      }, 1000);
+    } catch (error) {
       setEsExito(false);
-      setMensajeFeedback(
-        "No fue posible conectar con el servidor. Asegúrate de que el backend esté en ejecución y accesible."
-      );
+
+      if (error instanceof ApiError) {
+        if (error.status === 401 || error.status === 403) {
+          // Credenciales incorrectas: mensaje genérico sin revelar si el usuario existe
+          setMensajeFeedback("Correo electrónico o contraseña incorrectos. Por favor, verifica tus datos.");
+          passwordRef.current?.focus();
+        } else if (error.status === 400) {
+          setMensajeFeedback(error.message || "Los datos proporcionados no son válidos. Por favor, revísalos.");
+        } else if (error.status === 404) {
+          setMensajeFeedback("El servicio de inicio de sesión no se encuentra disponible en el backend (HTTP 404).");
+        } else {
+          setMensajeFeedback(error.message || "Error en el servidor. Por favor, intenta de nuevo más tarde.");
+        }
+      } else {
+        setMensajeFeedback("Ocurrió un error inesperado al iniciar sesión.");
+      }
     } finally {
       setCargando(false);
     }

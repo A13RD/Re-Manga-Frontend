@@ -2,7 +2,8 @@
 
 import React, { useState, useRef } from "react";
 import Link from "next/link";
-import type { RegistroPayload, RegistroResponse, ApiErrorResponse } from "@/types/auth";
+import type { RegistroPayload, RegistroResponse } from "@/types/auth";
+import { api, ApiError } from "@/lib/api";
 
 interface FormValues {
   nombre: string;
@@ -138,76 +139,49 @@ export function RegistroContent() {
     setMensajeFeedback("");
     setEsExito(false);
 
-    // Configuración segura de la URL base desde variable de entorno con fallback al puerto acordado (4000)
-    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/+$/, "");
-    const endpoint = `${baseUrl}/api/auth/register`;
-
-    // Enviar únicamente los campos requeridos por el registro (sin confirmación de contraseña ni datos ficticios)
+    // Enviar campos requeridos por el registro mediante el cliente HTTP centralizado
     const payload: RegistroPayload = {
       nombre: valores.nombre.trim(),
+      name: valores.nombre.trim(),
       email: valores.email.trim().toLowerCase(),
       password: valores.password,
     };
 
     try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const data = await api.post<RegistroResponse>("/api/auth/register", payload);
 
-      let data: (RegistroResponse & ApiErrorResponse) | null = null;
-      try {
-        data = await res.json();
-      } catch {
-        // Respuesta sin cuerpo JSON
-      }
-
-      if (res.ok) {
-        // Registro exitoso confirmado por el servidor (201 Created o 200 OK)
-        // No se asume inicio de sesión persistente ni se almacena la contraseña
-        setEsExito(true);
-        setMensajeFeedback(
-          data?.message || "¡Registro exitoso! Tu cuenta ha sido creada. Podrás iniciar sesión próximamente."
-        );
-        // Restablecer el formulario tras confirmación exitosa
-        setValores(VALORES_INICIALES);
-        setErrores({});
-      } else if (res.status === 409) {
-        // Conflicto: correo ya registrado
-        setEsExito(false);
-        const mensajeConflicto =
-          data?.message || "No se puede registrar este correo porque ya existe una cuenta.";
-        setErrores((prev) => ({ ...prev, email: mensajeConflicto }));
-        setMensajeFeedback(mensajeConflicto);
-        emailRef.current?.focus();
-      } else if (res.status === 400) {
-        // Error de validación del backend
-        setEsExito(false);
-        setMensajeFeedback(
-          data?.message || data?.error || "Los datos proporcionados no son válidos. Por favor, revísalos."
-        );
-      } else if (res.status === 404) {
-        // Endpoint no disponible o no implementado en el backend
-        setEsExito(false);
-        setMensajeFeedback(
-          "El endpoint de registro no se encuentra disponible en el backend (HTTP 404). Verifica que el servicio esté implementado."
-        );
-      } else {
-        // Otros códigos de error (500, etc.) sin exponer información sensible ni trazas internas
-        setEsExito(false);
-        setMensajeFeedback(
-          data?.message || `Error en el servidor (HTTP ${res.status}). Por favor, intenta de nuevo más tarde.`
-        );
-      }
-    } catch {
-      // Error de red (backend no iniciado, timeout o bloqueo de conexión)
-      setEsExito(false);
+      // Registro exitoso confirmado por el servidor (HTTP 201)
+      setEsExito(true);
       setMensajeFeedback(
-        "No fue posible conectar con el servidor. Asegúrate de que el backend esté en ejecución y accesible."
+        data?.message || "¡Registro exitoso! Tu cuenta ha sido creada. Ya puedes iniciar sesión con tus credenciales."
       );
+      // Restablecer el formulario tras confirmación exitosa
+      setValores(VALORES_INICIALES);
+      setErrores({});
+    } catch (error) {
+      setEsExito(false);
+
+      if (error instanceof ApiError) {
+        if (error.status === 409) {
+          // Conflicto: correo ya registrado
+          const mensajeConflicto = error.message || "No se puede registrar este correo porque ya existe una cuenta.";
+          setErrores((prev) => ({ ...prev, email: mensajeConflicto }));
+          setMensajeFeedback(mensajeConflicto);
+          emailRef.current?.focus();
+        } else if (error.status === 400) {
+          // Error de validación del backend
+          setMensajeFeedback(error.message || "Los datos proporcionados no son válidos. Por favor, revísalos.");
+        } else if (error.status === 404) {
+          // Endpoint no disponible
+          setMensajeFeedback("El servicio de registro no se encuentra disponible en el backend (HTTP 404).");
+        } else {
+          // Error 500 u otros
+          setMensajeFeedback(error.message || "Ocurrió un error en el servidor. Por favor, intenta más tarde.");
+        }
+      } else {
+        // Error inesperado
+        setMensajeFeedback("Ocurrió un error inesperado al procesar el registro.");
+      }
     } finally {
       setCargando(false);
     }

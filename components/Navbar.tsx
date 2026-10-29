@@ -2,14 +2,17 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 
 export function Navbar() {
   const { theme, toggleTheme, isMounted } = useTheme();
   const { totalItems } = useCart();
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
@@ -21,6 +24,16 @@ export function Navbar() {
     setPrevPathname(pathname);
     setIsMobileMenuOpen(false);
   }
+
+  const handleLogout = () => {
+    logout();
+    setIsMobileMenuOpen(false);
+    if (pathname === "/vender") {
+      router.push("/");
+    }
+  };
+
+  const mostrarSesionActiva = isMounted && !authLoading && isAuthenticated && Boolean(user);
 
   // Manejar tecla Escape y clics fuera del menú móvil
   useEffect(() => {
@@ -98,28 +111,57 @@ export function Navbar() {
           >
             Vender
           </Link>
-          <Link
-            href="/login"
-            aria-current={pathname === "/login" || pathname === "/iniciar-sesion" ? "page" : undefined}
-            className={`text-[0.95rem] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm ${
-              pathname === "/login" || pathname === "/iniciar-sesion"
-                ? "text-[var(--color-principal)]"
-                : "text-[var(--color-texto)] hover:text-[var(--color-principal)]"
-            }`}
-          >
-            Iniciar sesión
-          </Link>
-          <Link
-            href="/registro"
-            aria-current={pathname === "/registro" ? "page" : undefined}
-            className={`text-[0.95rem] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm ${
-              pathname === "/registro"
-                ? "text-[var(--color-principal)]"
-                : "text-[var(--color-texto)] hover:text-[var(--color-principal)]"
-            }`}
-          >
-            Registro
-          </Link>
+          {mostrarSesionActiva ? (
+            <div className="flex items-center gap-3">
+              <span
+                className="text-[0.95rem] font-semibold text-[var(--color-texto)] flex items-center gap-1.5"
+                title={user?.email}
+              >
+                <span className="text-[var(--color-texto-secundario)] font-normal text-xs">Hola,</span>
+                <span className="truncate max-w-[130px] font-bold">
+                  {user?.nombre || user?.name || user?.email}
+                </span>
+                {user?.role === "admin" && (
+                  <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[var(--color-principal)] text-[var(--color-blanco)] font-bold">
+                    Admin
+                  </span>
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-[0.9rem] font-semibold text-[var(--color-principal)] hover:underline cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm"
+                aria-label="Cerrar sesión"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                aria-current={pathname === "/login" || pathname === "/iniciar-sesion" ? "page" : undefined}
+                className={`text-[0.95rem] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm ${
+                  pathname === "/login" || pathname === "/iniciar-sesion"
+                    ? "text-[var(--color-principal)]"
+                    : "text-[var(--color-texto)] hover:text-[var(--color-principal)]"
+                }`}
+              >
+                Iniciar sesión
+              </Link>
+              <Link
+                href="/registro"
+                aria-current={pathname === "/registro" ? "page" : undefined}
+                className={`text-[0.95rem] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] rounded-sm ${
+                  pathname === "/registro"
+                    ? "text-[var(--color-principal)]"
+                    : "text-[var(--color-texto)] hover:text-[var(--color-principal)]"
+                }`}
+              >
+                Registro
+              </Link>
+            </>
+          )}
           <Link
             href="/carrito"
             aria-current={pathname === "/carrito" ? "page" : undefined}
@@ -243,30 +285,57 @@ export function Navbar() {
             >
               Vender
             </Link>
-            <Link
-              href="/login"
-              onClick={() => setIsMobileMenuOpen(false)}
-              aria-current={pathname === "/login" || pathname === "/iniciar-sesion" ? "page" : undefined}
-              className={`px-3 py-2.5 rounded-[var(--radio)] text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] ${
-                pathname === "/login" || pathname === "/iniciar-sesion"
-                  ? "bg-[var(--color-superficie-secundaria)] text-[var(--color-principal)]"
-                  : "text-[var(--color-texto)] hover:bg-[var(--color-superficie-secundaria)] hover:text-[var(--color-principal)]"
-              }`}
-            >
-              Iniciar sesión
-            </Link>
-            <Link
-              href="/registro"
-              onClick={() => setIsMobileMenuOpen(false)}
-              aria-current={pathname === "/registro" ? "page" : undefined}
-              className={`px-3 py-2.5 rounded-[var(--radio)] text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] ${
-                pathname === "/registro"
-                  ? "bg-[var(--color-superficie-secundaria)] text-[var(--color-principal)]"
-                  : "text-[var(--color-texto)] hover:bg-[var(--color-superficie-secundaria)] hover:text-[var(--color-principal)]"
-              }`}
-            >
-              Registro
-            </Link>
+            {mostrarSesionActiva ? (
+              <>
+                <div className="px-3 py-2.5 rounded-[var(--radio)] bg-[var(--color-superficie-secundaria)] border border-[var(--color-borde)] flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-[var(--color-texto-secundario)]">Conectado como</span>
+                    <span className="text-sm font-bold text-[var(--color-texto)] truncate max-w-[200px]">
+                      {user?.nombre || user?.name || user?.email}
+                    </span>
+                  </div>
+                  {user?.role === "admin" && (
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[var(--color-principal)] text-[var(--color-blanco)] font-bold">
+                      Admin
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="text-left px-3 py-2.5 rounded-[var(--radio)] text-base font-semibold text-[var(--color-principal)] hover:bg-[var(--color-superficie-secundaria)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] cursor-pointer"
+                >
+                  Cerrar sesión
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  aria-current={pathname === "/login" || pathname === "/iniciar-sesion" ? "page" : undefined}
+                  className={`px-3 py-2.5 rounded-[var(--radio)] text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] ${
+                    pathname === "/login" || pathname === "/iniciar-sesion"
+                      ? "bg-[var(--color-superficie-secundaria)] text-[var(--color-principal)]"
+                      : "text-[var(--color-texto)] hover:bg-[var(--color-superficie-secundaria)] hover:text-[var(--color-principal)]"
+                  }`}
+                >
+                  Iniciar sesión
+                </Link>
+                <Link
+                  href="/registro"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  aria-current={pathname === "/registro" ? "page" : undefined}
+                  className={`px-3 py-2.5 rounded-[var(--radio)] text-base font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-principal)] ${
+                    pathname === "/registro"
+                      ? "bg-[var(--color-superficie-secundaria)] text-[var(--color-principal)]"
+                      : "text-[var(--color-texto)] hover:bg-[var(--color-superficie-secundaria)] hover:text-[var(--color-principal)]"
+                  }`}
+                >
+                  Registro
+                </Link>
+              </>
+            )}
             <Link
               href="/carrito"
               onClick={() => setIsMobileMenuOpen(false)}

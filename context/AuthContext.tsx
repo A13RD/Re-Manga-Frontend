@@ -7,112 +7,125 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import type { AuthUser, ApiErrorResponse } from "@/types/auth";
+import type { AuthUser, MeResponse } from "@/types/auth";
+import {
+  api,
+  ApiError,
+  getStoredToken,
+  setStoredToken,
+  setOnUnauthorizedListener,
+} from "@/lib/api";
 
 export interface AuthContextType {
   user: AuthUser | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  login: (token: string, user: AuthUser) => void;
+  logout: () => void;
   checkSession: () => Promise<void>;
-  logout: () => Promise<void>;
-  setAuthenticatedUser: (user: AuthUser | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
  * Proveedor de contexto de autenticación para Re-Manga.
- * Gestiona el estado de sesión en memoria de React sin almacenar
- * contraseñas ni tokens sensibles en localStorage o cookies accesibles por JavaScript.
- *
- * Prioriza la verificación de sesión basada en cookies HttpOnly si el backend
- * cuenta con un endpoint activo (ej: /api/auth/me). Si el endpoint no existe (HTTP 404),
- * asume estado no autenticado sin romper la hidratación ni inventar datos ficticios.
+ * Gestiona el token JWT y la sesión del usuario obtenida del backend.
+ * - Restaura la sesión al recargar la página consultando GET /api/auth/me con el token almacenado.
+ * - Mantiene el estado del usuario verificado por el servidor (no confía en roles modificables del cliente).
+ * - Maneja respuestas 401 limpiando la sesión vencida de manera no intrusiva.
+ * - Evita desajustes de hidratación en Next.js.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const getBaseUrl = useCallback((): string => {
-    return (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/+$/, "");
+  /**
+   * Cierra la sesión en el frontend: elimina el JWT de localStorage y restablece el estado en memoria.
+   */
+  const logout = useCallback(() => {
+    setStoredToken(null);
+    setUser(null);
+    setTokenState(null);
   }, []);
 
   /**
-   * Consulta al backend si existe una sesión activa y válida.
-   * Utiliza credentials: "include" para transmitir cookies HttpOnly si están habilitadas.
+   * Establece una nueva sesión tras un inicio de sesión exitoso con token y perfil confirmado por el backend.
    */
-  const checkSession = useCallback(async () => {
-    const baseUrl = getBaseUrl();
-    const endpoint = `${baseUrl}/api/auth/me`;
-
-    try {
-      const res = await fetch(endpoint, {
-        method: "GET",
-        headers: {
-          "Accept": "application/json",
-        },
-        credentials: "include",
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.user) {
-          setUser(data.user);
-          return;
-        }
-      }
-      // Sesión expirada, inválida o endpoint no implementado (404/401)
-      setUser(null);
-    } catch {
-      // Backend no disponible o error de red
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [getBaseUrl]);
-
-  /**
-   * Cierra la sesión enviando la solicitud al backend si el endpoint existe,
-   * y limpia el estado local en memoria.
-   */
-  const logout = useCallback(async () => {
-    const baseUrl = getBaseUrl();
-    const endpoint = `${baseUrl}/api/auth/logout`;
-
-    try {
-      await fetch(endpoint, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {
-      // Manejo silencioso en caso de error de red o 404 del endpoint
-    } finally {
-      setUser(null);
-    }
-  }, [getBaseUrl]);
-
-  const setAuthenticatedUser = useCallback((newUser: AuthUser | null) => {
+  const login = useCallback((newToken: string, newUser: AuthUser) => {
+    setStoredToken(newToken);
+    setTokenState(newToken);
     setUser(newUser);
   }, []);
 
+  /**
+   * Verifica la validez de la sesión contra el endpoint real del backend (GET /api/auth/me).
+   * Solo si el servidor valida la firma y vigencia del JWT se asume la identidad del usuario.
+   */
+  const checkSession = useCallback(async () => {
+    const storedToken = getStoredToken();
+
+    if (!storedToken) {
+      setUser(null);
+      setTokenState(null);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const data = await api.get<MeResponse>("/api/auth/me", { token: storedToken });
+      if (data?.user) {
+        setUser(data.user);
+        setTokenState(storedToken);
+      } else {
+        logout();
+      }
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
+        // Token expirado, inválido o no reconocido por el backend
+        logout();
+      } else {
+        // Error de red temporal: no se destruye la sesión arbitrariamente pero se mantiene no confirmada
+        setUser(null);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [logout]);
+
   useEffect(() => {
-    checkSession();
-  }, [checkSession]);
+    // Escuchar respuestas 401 del cliente HTTP en peticiones privadas
+    setOnUnauthorizedListener(() => {
+      logout();
+    });
+
+    // Diferir la verificación inicial de sesión fuera del turno síncrono del efecto
+    const timer = setTimeout(() => {
+      void checkSession();
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      setOnUnauthorizedListener(null);
+    };
+  }, [checkSession, logout]);
 
   const value: AuthContextType = {
     user,
+    token,
     isAuthenticated: Boolean(user),
     isLoading,
-    checkSession,
+    login,
     logout,
-    setAuthenticatedUser,
+    checkSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 /**
- * Hook para acceder al contexto de autenticación en componentes cliente.
+ * Hook para acceder a la sesión y acciones de autenticación.
  */
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
@@ -121,4 +134,3 @@ export function useAuth(): AuthContextType {
   }
   return context;
 }
-

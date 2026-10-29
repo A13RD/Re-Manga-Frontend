@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { api, ApiError } from "@/lib/api";
 import type {
   SaleFormValues,
   SaleFormErrors,
@@ -176,12 +177,8 @@ export function SaleSection() {
     setMensajeFeedback("");
     setEsExito(false);
 
-    // Configuración de la URL del backend respetando la variable de entorno y puerto acordado (4000)
-    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/+$/, "");
-    const endpoint = `${baseUrl}/api/solicitudes`;
-
     // Estructuración del payload estrictamente según el contrato del backend (CreateSaleRequestDTO)
-    // No se envía userId en el body, el backend lo asocia mediante la sesión autenticada
+    // El backend asocia automáticamente el userId mediante el token JWT verificado
     const payload: CreateSaleRequestPayload = {
       title: valores.title.trim(),
       volume: valores.volume.trim() !== "" ? Number(valores.volume) : null,
@@ -192,72 +189,47 @@ export function SaleSection() {
       description: valores.description.trim(),
     };
 
-    // Encabezados para la solicitud respetando la autenticación del backend (authMock / sesión)
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-    };
-
-    if (user.id) {
-      headers["x-user-id"] = user.id;
-    }
-
     try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers,
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
+      const data = await api.post<SaleRequestResponse>("/api/solicitudes", payload);
 
-      let data: (SaleRequestResponse & { message?: string }) | null = null;
-      try {
-        data = await res.json();
-      } catch {
-        // Respuesta sin cuerpo JSON
-      }
-
-      if (res.ok) {
-        // Solicitud creada con éxito (HTTP 201)
-        setEsExito(true);
-        const estadoConfirmado = data?.status || "PENDING";
-        setMensajeFeedback(
-          `¡Solicitud enviada con éxito! Tu publicación ha quedado registrada en estado de revisión (${estadoConfirmado}). Nuestro equipo la evaluará antes de publicarla en el catálogo.`
-        );
-        // Limpiar el formulario únicamente tras confirmación exitosa
-        setValores(VALORES_INICIALES);
-        setErrores({});
-      } else if (res.status === 401 || res.status === 403) {
-        // Error de autenticación o falta de permisos en el backend
-        setEsExito(false);
-        setMensajeFeedback(
-          data?.message || "No tienes autorización para realizar esta solicitud. Por favor, inicia sesión nuevamente."
-        );
-      } else if (res.status === 400) {
-        // Error de validación del backend
-        setEsExito(false);
-        setMensajeFeedback(
-          data?.message || "Faltan campos obligatorios o los datos enviados no son válidos."
-        );
-      } else if (res.status === 404) {
-        // Endpoint no disponible o ruta no encontrada
-        setEsExito(false);
-        setMensajeFeedback(
-          "El servicio de solicitudes de venta no se encuentra disponible en el backend (HTTP 404). Verifica que el servicio esté en ejecución."
-        );
-      } else {
-        // Error del servidor (500 u otros códigos de error)
-        setEsExito(false);
-        setMensajeFeedback(
-          data?.message || `Error en el servidor (HTTP ${res.status}). Por favor, intenta de nuevo más tarde.`
-        );
-      }
-    } catch {
-      // Error de red / backend no accesible
-      setEsExito(false);
+      // Solicitud creada con éxito (HTTP 201)
+      setEsExito(true);
+      const estadoConfirmado = data?.status || "PENDING";
       setMensajeFeedback(
-        "No fue posible conectar con el servidor. Asegúrate de que el backend esté en ejecución y accesible."
+        `¡Solicitud enviada con éxito! Tu publicación ha quedado registrada en estado de revisión (${estadoConfirmado}). Nuestro equipo la evaluará antes de publicarla en el catálogo.`
       );
+      // Limpiar el formulario únicamente tras confirmación exitosa
+      setValores(VALORES_INICIALES);
+      setErrores({});
+    } catch (error) {
+      setEsExito(false);
+
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          setMensajeFeedback(
+            error.message || "Tu sesión ha expirado o no tienes autorización. Por favor, inicia sesión nuevamente."
+          );
+        } else if (error.status === 403) {
+          // Error 403: permisos insuficientes (no cierra sesión)
+          setMensajeFeedback(
+            error.message || "Acceso denegado: no tienes permisos suficientes para realizar esta acción."
+          );
+        } else if (error.status === 400) {
+          setMensajeFeedback(
+            error.message || "Faltan campos obligatorios o los datos enviados no son válidos."
+          );
+        } else if (error.status === 404) {
+          setMensajeFeedback(
+            "El servicio de solicitudes de venta no se encuentra disponible en el backend (HTTP 404)."
+          );
+        } else {
+          setMensajeFeedback(
+            error.message || "Error en el servidor. Por favor, intenta de nuevo más tarde."
+          );
+        }
+      } else {
+        setMensajeFeedback("Ocurrió un error inesperado al enviar la solicitud.");
+      }
     } finally {
       setCargando(false);
     }

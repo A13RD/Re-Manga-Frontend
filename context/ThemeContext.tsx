@@ -45,7 +45,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [isMounted, setIsMounted] = useState<boolean>(false);
 
   useEffect(() => {
-    setIsMounted(true);
     let temaInicial: Theme = "claro";
 
     try {
@@ -57,8 +56,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       // Si localStorage no está disponible o lanza error, se mantiene 'claro'.
     }
 
-    setTheme(temaInicial);
-    aplicarClasesTema(temaInicial);
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+      setTheme(temaInicial);
+      aplicarClasesTema(temaInicial);
+    }, 0);
 
     // Sincronización entre pestañas mediante el evento 'storage'
     const handleStorageChange = (event: StorageEvent) => {
@@ -71,6 +73,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener("storage", handleStorageChange);
     return () => {
+      clearTimeout(timer);
       window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
