@@ -71,11 +71,11 @@ export function PerfilContent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 text-sm">
             <div>
               <span className="block text-xs font-semibold text-[var(--color-texto-secundario)] mb-1 uppercase tracking-wider">
-                Identificador de cuenta
+                Correo registrado
               </span>
-              <code className="text-xs font-mono text-[var(--color-texto)] bg-[var(--color-superficie-secundaria)] px-2.5 py-1 rounded border border-[var(--color-borde)]">
-                {user?.id}
-              </code>
+              <span className="text-sm font-semibold text-[var(--color-texto)]">
+                {user?.email}
+              </span>
             </div>
             <div>
               <span className="block text-xs font-semibold text-[var(--color-texto-secundario)] mb-1 uppercase tracking-wider">
@@ -83,7 +83,7 @@ export function PerfilContent() {
               </span>
               <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#238636] dark:text-[#3fb950]">
                 <span className="w-2 h-2 rounded-full bg-[#238636]" />
-                Autenticada con JWT verificado
+                Sesión activa
               </span>
             </div>
           </div>

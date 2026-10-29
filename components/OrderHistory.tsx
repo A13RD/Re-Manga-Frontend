@@ -9,6 +9,8 @@ import type { Order } from "@/types/order";
 
 export function OrderHistory() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [direccionesPorOrden, setDireccionesPorOrden] = useState<Record<string, string>>({});
+  const [direccionDefault, setDireccionDefault] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,6 +18,18 @@ export function OrderHistory() {
     setIsLoading(true);
     setError(null);
     try {
+      try {
+        const rawMap = localStorage.getItem("remanga_ordenes_direcciones");
+        if (rawMap) {
+          setDireccionesPorOrden(JSON.parse(rawMap));
+        }
+        const savedDir = localStorage.getItem("remanga_direccion_entrega");
+        if (savedDir) {
+          setDireccionDefault(savedDir);
+        }
+      } catch {
+        // Ignorar errores de acceso a localStorage
+      }
       const data = await obtenerMisOrdenes();
       setOrders(data);
     } catch (err: unknown) {
@@ -128,6 +142,15 @@ export function OrderHistory() {
               ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 border-amber-300 dark:border-amber-800"
               : "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-400 border-red-300 dark:border-red-800";
 
+          const statusLabel =
+            order.status === "COMPLETED"
+              ? "Completado"
+              : order.status === "PENDING"
+              ? "Pendiente (Contraentrega)"
+              : "Cancelado";
+
+          const direccionOrden = direccionesPorOrden[order.id] || direccionDefault;
+
           return (
             <article
               key={order.id}
@@ -139,14 +162,19 @@ export function OrderHistory() {
                   <span className="text-xs text-[var(--color-texto-secundario)] block uppercase tracking-wider font-semibold">
                     Orden #{order.id.slice(0, 8)}...
                   </span>
-                  <span className="text-xs text-[var(--color-texto-secundario)]">{dateStr}</span>
+                  <span className="text-xs text-[var(--color-texto-secundario)] block">{dateStr}</span>
+                  {direccionOrden && (
+                    <span className="text-xs text-[var(--color-texto-secundario)] block mt-0.5">
+                      Entrega: <strong className="text-[var(--color-texto)] font-medium">{direccionOrden}</strong>
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3">
                   <span
                     className={`text-xs px-2.5 py-1 rounded-full font-bold border ${statusColor}`}
                   >
-                    {order.status}
+                    {statusLabel}
                   </span>
                   <strong className="text-base font-extrabold text-[var(--color-principal)]">
                     {formatearPrecioCOP(totalNum)}

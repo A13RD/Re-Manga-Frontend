@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -10,10 +10,14 @@ import { formatearPrecioCOP } from "@/data/mangas";
 import { crearOrden } from "@/lib/ordenes";
 import type { Order } from "@/types/order";
 
+const DIRECCION_STORAGE_KEY = "remanga_direccion_entrega";
+const ORDENES_DIRECCIONES_KEY = "remanga_ordenes_direcciones";
+
 /**
  * Componente cliente que renderiza la interfaz completa de la página del carrito.
  * Gestiona la lista de productos, controles de cantidad, eliminación individual,
- * acción para vaciar el carrito con confirmación y cálculo reactivo del total.
+ * acción para vaciar el carrito con confirmación, verificación de dirección contraentrega
+ * y cálculo reactivo del total.
  */
 export function CarritoContent() {
   const router = useRouter();
@@ -27,9 +31,36 @@ export function CarritoContent() {
     vaciarCarrito,
   } = useCart();
 
+  const [direccionEntrega, setDireccionEntrega] = useState<string>("");
+  const [direccionConfirmada, setDireccionConfirmada] = useState<string>("");
   const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState<Order | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const guardada = localStorage.getItem(DIRECCION_STORAGE_KEY);
+        if (guardada) {
+          setDireccionEntrega(guardada);
+        }
+      } catch {
+        // Ignorar errores de acceso a localStorage
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleDireccionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setDireccionEntrega(val);
+    if (orderError) setOrderError(null);
+    try {
+      localStorage.setItem(DIRECCION_STORAGE_KEY, val);
+    } catch {
+      // Ignorar errores de acceso a localStorage
+    }
+  };
 
   /**
    * Solicita confirmación nativa al usuario antes de vaciar el carrito,
@@ -45,7 +76,7 @@ export function CarritoContent() {
   };
 
   /**
-   * Procesa la compra enviando los items al endpoint protegido POST /api/orders.
+   * Procesa la compra contraentrega enviando los items al endpoint protegido POST /api/orders.
    * El backend valida el stock y recalcula los precios reales desde la base de datos.
    */
   const handleRealizarCompra = async () => {
@@ -61,6 +92,12 @@ export function CarritoContent() {
       return;
     }
 
+    const dirLimpia = direccionEntrega.trim();
+    if (!dirLimpia) {
+      setOrderError("Por favor ingresa y verifica tu dirección de entrega antes de finalizar el pedido.");
+      return;
+    }
+
     setIsCheckingOut(true);
     try {
       const orderPayload = items.map((item) => ({
@@ -69,6 +106,18 @@ export function CarritoContent() {
       }));
 
       const createdOrder = await crearOrden(orderPayload);
+
+      try {
+        localStorage.setItem(DIRECCION_STORAGE_KEY, dirLimpia);
+        const rawMap = localStorage.getItem(ORDENES_DIRECCIONES_KEY);
+        const map: Record<string, string> = rawMap ? JSON.parse(rawMap) : {};
+        map[createdOrder.id] = dirLimpia;
+        localStorage.setItem(ORDENES_DIRECCIONES_KEY, JSON.stringify(map));
+      } catch {
+        // Ignorar errores de localStorage
+      }
+
+      setDireccionConfirmada(dirLimpia);
       vaciarCarrito();
       setOrderSuccess(createdOrder);
     } catch (err: unknown) {
@@ -96,23 +145,35 @@ export function CarritoContent() {
             </svg>
           </div>
           <h1 id="titulo-orden-exitosa" className="text-2xl sm:text-3xl font-extrabold text-[var(--color-texto)] mb-2">
-            ¡Compra realizada con éxito!
+            ¡Pedido contraentrega confirmado!
           </h1>
           <p className="text-[var(--color-texto-secundario)] text-base mb-6">
-            Tu pedido ha sido registrado correctamente en la base de datos. El stock ha sido actualizado.
+            Tu orden ha sido registrada exitosamente y las unidades se han reservado del inventario. El pago se realiza en efectivo al recibir tus mangas.
           </p>
 
           <div className="bg-[var(--color-superficie-secundaria)] rounded-[var(--radio)] p-5 text-left mb-6 space-y-2 border border-[var(--color-borde)]">
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-sm gap-4">
               <span className="text-[var(--color-texto-secundario)]">N.° de Orden:</span>
-              <span className="font-mono font-bold text-[var(--color-texto)]">{orderSuccess.id}</span>
+              <span className="font-mono font-bold text-[var(--color-texto)] break-all text-right">{orderSuccess.id}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[var(--color-texto-secundario)]">Estado:</span>
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{orderSuccess.status}</span>
+            <div className="flex justify-between text-sm gap-4">
+              <span className="text-[var(--color-texto-secundario)]">Modalidad de pago:</span>
+              <span className="font-semibold text-[var(--color-texto)]">Contraentrega</span>
+            </div>
+            {direccionConfirmada && (
+              <div className="flex justify-between text-sm gap-4">
+                <span className="text-[var(--color-texto-secundario)]">Dirección de entrega:</span>
+                <span className="font-semibold text-[var(--color-texto)] text-right">{direccionConfirmada}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm gap-4">
+              <span className="text-[var(--color-texto-secundario)]">Estado del pedido:</span>
+              <span className="font-semibold text-amber-600 dark:text-amber-400">
+                {orderSuccess.status === "PENDING" ? "Pendiente de entrega (PENDING)" : orderSuccess.status}
+              </span>
             </div>
             <div className="flex justify-between text-base font-bold pt-2 border-t border-[var(--color-borde)]">
-              <span className="text-[var(--color-texto)]">Total pagado:</span>
+              <span className="text-[var(--color-texto)]">Total a pagar contraentrega:</span>
               <span className="text-[var(--color-principal)]">{formatearPrecioCOP(Number(orderSuccess.totalAmount))}</span>
             </div>
           </div>
@@ -288,6 +349,35 @@ export function CarritoContent() {
                 {formatearPrecioCOP(totalPrecio)}
               </strong>
             </p>
+
+            {/* Información de pago contraentrega y verificación de dirección */}
+            <div className="mt-4 pt-4 border-t border-[var(--color-borde)] space-y-3">
+              <div className="bg-[var(--color-superficie-secundaria)] rounded-[var(--radio)] p-3 border border-[var(--color-borde)]">
+                <span className="block text-xs font-bold uppercase tracking-wider text-[var(--color-principal)] mb-0.5">
+                  Modalidad: Pago contraentrega
+                </span>
+                <p className="text-xs text-[var(--color-texto-secundario)] leading-relaxed m-0">
+                  No se requiere tarjeta ni pasarela de pago en línea. Pagas en efectivo al recibir tus mangas.
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="direccion-entrega"
+                  className="block text-xs font-bold text-[var(--color-texto)] mb-1.5"
+                >
+                  Dirección de entrega <span className="text-[var(--color-principal)]">*</span>
+                </label>
+                <input
+                  id="direccion-entrega"
+                  type="text"
+                  value={direccionEntrega}
+                  onChange={handleDireccionChange}
+                  placeholder="Ej. Calle 45 # 12-34, Apto 301, Bogotá"
+                  className="w-full border border-[var(--color-borde)] rounded-[var(--radio)] py-2.5 px-3 text-sm text-[var(--color-texto)] bg-[var(--color-blanco)] focus:outline-2 focus:outline-[var(--color-principal)]"
+                />
+              </div>
+            </div>
 
             {orderError && (
               <div
