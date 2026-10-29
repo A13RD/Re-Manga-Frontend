@@ -22,10 +22,31 @@ let cachedToken: string | null = null;
 let onUnauthorizedCallback: (() => void) | null = null;
 
 /**
- * Obtiene la URL base de la API respetando la variable de entorno NEXT_PUBLIC_API_URL.
+ * Obtiene la URL base del servidor backend respetando NEXT_PUBLIC_API_URL.
+ * Normaliza barras finales y un sufijo "/api" opcional para evitar rutas "/api/api" duplicadas.
  */
 export function getApiBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/+$/, "");
+  const raw = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000")
+    .trim()
+    .replace(/\/+$/, "");
+  return raw.replace(/\/api$/i, "");
+}
+
+/**
+ * Construye la URL final hacia el backend garantizando el prefijo "/api" sin duplicarlo,
+ * tanto si NEXT_PUBLIC_API_URL incluye "/api" al final como si solo define el dominio base.
+ */
+export function buildApiUrl(endpoint: string): string {
+  if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+    return endpoint;
+  }
+  const baseUrl = getApiBaseUrl();
+  const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const pathWithApi =
+    normalizedEndpoint === "/api" || normalizedEndpoint.startsWith("/api/")
+      ? normalizedEndpoint
+      : `/api${normalizedEndpoint}`;
+  return `${baseUrl}${pathWithApi}`;
 }
 
 /**
@@ -80,8 +101,7 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
  * Realiza una solicitud HTTP estructurada hacia el backend.
  */
 async function httpRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const baseUrl = getApiBaseUrl();
-  const url = endpoint.startsWith("http") ? endpoint : `${baseUrl}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+  const url = buildApiUrl(endpoint);
 
   const headers = new Headers(options.headers || {});
   headers.set("Accept", "application/json");
